@@ -1,8 +1,10 @@
+const { resolveSoa } = require("dns");
 const express = require("express");
 const { reset } = require("yargs");
 const PORT = process.env.PORT || 5006;
 const app = express();
 const sqlite3 = require("sqlite3").verbose();
+const inputCheck = require("./utils/inputCheck");
 
 // Expess middleware
 app.use(express.urlencoded({ extended: false }));
@@ -88,17 +90,39 @@ app.delete("/api/candidate/:id", (req, res) => {
   });
 });
 
-// // CREATE a candidate
-// const sql =
-//   "INSERT INTO candidates (id, first_name, last_name, industry_connected) VALUES (?,?,?,?)";
-// const params = [1, "Ronald", "Firbank", 1];
-// //ES5 function, not arror function, to user 'this'
-// db.run(sql, params, function (err, result) {
-//   if (err) {
-//     console.log(err);
-//   }
-//   console.log(result, this.lastID); // lastID displays the 'id' of the added
-// });
+// CREATE a candidate
+// we're using object destructuring to pull the body property out of the request object.
+app.post("/api/candidate", ({ body }, res) => {
+  const errors = inputCheck(
+    body,
+    "first_name",
+    "last_name",
+    "industry_connected"
+  );
+  if (errors) {
+    res.status(400).json({ error: errors });
+    return;
+  }
+
+  const sql = `INSERT INTO candidates (first_name, last_name, industry_connected) 
+  VALUES (?,?,?)`;
+  const params = [body.first_name, body.last_name, body.industry_connected];
+  // ES5 function, not arrow function, to use 'this'
+  // 'run' will execute the prepared SQL statement
+  db.run(sql, params, function (err, result) {
+    if (err) {
+      res.status(400).json({ error: err.msg });
+      return;
+    }
+
+    res.json({
+      message: "success",
+      data: body,
+      // 'this.lastID' returns the id of the inserted row
+      id: this.lastID,
+    });
+  });
+});
 
 // Default response for any other request (Not Found) Catch all
 app.use((req, res) => {
