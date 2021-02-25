@@ -19,6 +19,8 @@ const db = new sqlite3.Database("./db/election.db", (err) => {
   console.log("Connected to the election database.");
 });
 
+/*CANDIDATES ROUTS START*/
+
 // 'all' method runs the SQL queryn and executes the callback
 // with all the resulting rows, that match the query;
 // once executed, the callback function captures the response from 2 variables:
@@ -58,7 +60,7 @@ app.get("/api/candidate/:id", (req, res) => {
   FROM candidates 
   LEFT JOIN parties
   ON candidates.party_id = parties.id
-  WHERE id = ?`;
+  WHERE candidates.id = ?`;
   const params = [req.params.id];
 
   // We're using the Database method get() to return a single row from the database call.
@@ -133,6 +135,95 @@ app.post("/api/candidate", ({ body }, res) => {
     });
   });
 });
+
+// This route might feel a little strange because we're using a parameter for the candidate's id (req.params.id),
+// but the request body contains the party's id (req.body.party_id). Why mix the two?
+// Again, we want to follow best practices for consistency and clarity.
+// The affected row's id should always be part of the route (e.g., /api/candidate/2)
+// while the actual fields we're updating should be part of the body.
+app.put("/api/candidate/:id", (req, res) => {
+  const errors = inputCheck(req.body, "party_id");
+
+  // ensures party_id is defined in the request body
+  if (errors) {
+    res.status(400).json({ error: errors });
+    return;
+  }
+  const sql = `UPDATE candidates SET party_id = ? WHERE id = ?`;
+  const params = [req.body.party_id, req.params.id];
+
+  // 'run' will execute the prepared SQL statement
+  db.run(sql, params, function (err, result) {
+    if (err) {
+      res.status(400).json({
+        error: err.message,
+      });
+      return;
+    }
+
+    res.json({
+      message: "success",
+      data: req.body,
+      changes: this.changes,
+    });
+  });
+});
+
+/*CANDIDATES ROUTS END*/
+
+/*PARTIES ROUTS START*/
+
+app.get("/api/parties", (req, res) => {
+  const sql = "SELECT * FROM parties";
+  const params = [];
+
+  // 'all' retrieves all the rows
+  db.all(sql, params, (err, rows) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+
+    res.json({
+      message: "success",
+      data: rows,
+    });
+  });
+});
+
+app.get("/api/party/:id", (req, res) => {
+  const sql = `SELECT * 
+  FROM parties WHERE id = ?`;
+  const params = [req.params.id];
+
+  // We're using the Database method get() to return a single row from the database call.
+  db.get(sql, params, (err, row) => {
+    if (err) {
+      res.status(400).json({
+        error: err.msg,
+      });
+      return;
+    }
+    res.json({
+      message: "succeess",
+      data: row,
+    });
+  });
+});
+
+app.delete("/api/party/:id", (req, res) => {
+  const sql = `DELETE FROM parties WHERE id = ?`;
+  const params = [req.params.id];
+  db.run(sql, params, function (err, result) {
+    if (err) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    res.json({ message: "successfully deleted", changes: this.changes });
+  });
+});
+
+/*PARTIES ROUTS END*/
 
 // Default response for any other request (Not Found) Catch all
 app.use((req, res) => {
