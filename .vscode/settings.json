@@ -1,0 +1,11 @@
+{
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "database": "${workspaceFolder:u-develop-it}/db/election.db",
+            "name": "elections"
+        }
+    ],
+    "sqltools.useNodeRuntime": true
+}
